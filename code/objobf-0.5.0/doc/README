@@ -1,0 +1,50 @@
+
+burneye2 objobf - x86/Linux ELF relocateable object obfuscator
+=============================================================================
+
+This program obfuscates .o ELF objects and can create graphs visualizing
+the structure of a function.
+
+
+Building
+--------
+
+cd src && make
+
+
+Quick info
+----------
+
+It should be able to handle fairly large object files by now, as all compiler
+generated constructs are supported. If in trouble, try with/without
+optimization options.
+
+Read the manpage ("man -l objobf.1") for examples. The graph output stuff may
+be interesting (visually at least :)
+
+Also try to load the output objects produced in IDA.
+
+See doc/FAQ for some points not in the manpage.
+
+
+Graphs
+------
+
+For graphs produced with loop detection, you need the aiSee visualization
+tool, which is available from http://www.aisee.com/download/
+(Symlink it to "xvcg" to have objobf call it correctly and display the graph
+with gv).
+
+
+License
+-------
+
+Please see doc/LICENSE and doc/LICENSE.info.
+
+
+Comments
+--------
+
+Send comments to scut@team-teso.net. New versions are available at
+http://segfault.net/~scut/objobf/
+

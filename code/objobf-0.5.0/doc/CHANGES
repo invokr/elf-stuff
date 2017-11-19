@@ -1,0 +1,182 @@
+
+0.5.0, 2003/08/09
+
+	Initial public release.
+
+0.4.13, 2003/04/16
+
+	Probably last version for the next three month (university), so
+	main focus is bug fixes. Add experimental instruction swapping which
+	sometimes even works right. Fix nasty dataflow related bugs.
+
+	- add experimental instruction swapping (-w option, disabled by
+	  default for -A). It is problematic to get this right for the generic
+	  case, as data aliasing has to be considered. Use with care (it is
+	  still quite buggy).
+	- changed minimum number of required instructions to do profiling from
+	  512 to 256
+	- BUGFIX/QUALITY related: ran extensive testcases with stock -A
+	  option, works without a single failure in more than 25,000 runs on
+	  reducebind.o. Also, the program has been extensivly valgrinded.
+	  Please report any reproduceable problem.
+	- fix dataflow analysis bug, where instruction prefixes (rep/repe)
+	  were not properly considered in modifying/using flags (ZF) and
+	  registers (ECX)
+	- fix bug in System V ABI dataflow layer, which missed eax/ecx/edx
+	  may be clobbered by a call instruction
+	- fix random function bug where a system call return value was ignored
+	  and an error remained uncatched, which resulted into invalid random
+	  numbers being produced
+
+
+0.4.12, 2003/04/09
+
+	- add basic block duplication and first opaque codepathes (-O option).
+	  This is automatically enabled with the -s option and leads to code
+	  bloat.
+	- add a userfriendly option: -A, activate all senseful obfuscation
+	  options with meaningful values so that a good amount of obfuscation
+	  is done
+
+
+0.4.11, 2003/04/08
+
+	Add basic block splitting, improve junk instruction placement and fix
+	bugs.
+
+	- add basic block splitting with -s option (to endtype: PASS). this
+	  provides a small gain in resilience against human analysis and paves
+	  the way for opaque control flow modification
+	- improve placement of junk instructions by doing a global basic block
+	  list and random picking a block out of it for every instruction
+	  (could still be improved by considering individual basic block
+	  sizes)
+	- improved manpage with recommendations on how to use each option
+	- fix deadlock bug involving small object files which are "saturated"
+	  register-use-wise at some points
+	- fix bug in basic block linearization: zero sized basic blocks were
+	  improperly grown, resulting in invalid linearization of
+	  non-terminating functions and - splitted basic blocks
+
+
+0.4.10, 2003/04/07
+
+	Improve junk instruction insertion in both flexibility and generated
+	opcode variety. Fix bugs and pave the way for more complex
+	obfuscation (opaque constructs, function merging).
+
+	- change "-j" option to represent a scale factor S, which has to be
+	  >= 1.0. The total number of instructions in the object file is
+	  roughly multiplied by this factor. For quite some level of
+	  obfuscation, choose values greater 6.0. More than ~10.0 does not
+	  help.
+	- add more type encodings to ia32_encode_*, now instructions with
+	  immediate operands are created, too. The generated instructions are
+	  still easily seperateable but this will improve over time.
+	- add additional safeguard for instruction insertion, to ensure there
+	  is no register clobbered
+	- fix complex three-operand instructions DEF's, which were not
+	  properly considered (imul, shdr)
+
+
+0.4.9, 2003/04/05
+
+	Add infrastructure for further obfuscation. Major cleanups and some
+	small fixes. Should be able to handle medium sized objects nicely now.
+
+	- add register usage profiling (-u option) for future use with junk
+	  instruction generation
+	- add instruction usage profiling (-i option) for future use (to
+	  blend better with original opcodes)
+	- add ABI convention abstraction, to keep the disassembler clean. for
+	  now, only a "i386-linux-systemv" handler exists which checks for
+	  register preserving at function calls and linux system call register
+	  usage
+	- make the register picking for junk instructions based on the
+	  register profile the object file has
+	- avoid source and target registers being the same
+	- fix dataflow analysis for unusual function termination (such as
+	  calling exit() or another function that does never return) where no
+	  "ret" instruction is generated
+	- fix System V ABI requirement for register usage (ret instruction
+	  implies USE of eax, ebx, esi, edi, esp and ebp now, "int 0x80" USE
+	  the same)
+
+
+0.4.8, 2003/04/03
+
+	Add junk instruction insertion. Fix bugs in symbol table update,
+	disassembler and data-/control flow heuristics.
+
+	- add simple junk instruction insertion and intra basic block
+	  manipulation infrastructure (relocation shifting, code insertion)
+	- fix System V calling convention (ABI) assumptions about register
+	  usage (eax for return value). For now, a kludge suffices (ret
+	  implies use of eax), but in the long run an ABI abstraction layer
+	  will be used, to cope better with the ABI in general
+	  (http://www.caldera.com/developers/devspecs/abi386-4.pdf, pp37)
+	- fix section header index update of all symbol table entries
+	  (previously, only the section symbol were updated)
+	- fix a prefix size ignorant bug in the IA32 disassembler
+	- extend the switchtable heuristics to also cover special cases of GCC
+	  generated SIB addressed moves
+	- fix bugs in dataflow analysis, where addressing registers of complex
+	  source/target operands were ignored as USE
+	- fix around a dozen instruction descriptions of the disassembler
+	- cleanup options by splitting into: general, graphing, obfuscation
+
+
+0.4.5, 2003/03/31
+
+	Add the linearization of switch tables and provide finer grained loop
+	detection configurability.
+
+	- add switch table fixing to the linearization engine, so full blown
+	  objects should be handled properly. If they are not properly
+	  linearized, please check with "-v 3", that the switch table is
+	  correctly found and the number of cases is correctly identified.
+	- add Dragon book way of loop unification for cases with multiple
+	  backedges and just one head block. This can be activated using -N,
+	  while the old way remains with the -n option.
+
+
+0.4.4, 2003/03/29
+
+	Improve graph layout for loop marked graphs.
+
+	- add vertical_order attributes to nodes within loop detected
+	  subgraphs, to preserve a "natural order" (head node is at top of the
+	  loop, and with high likelyhood the backedge source node is at the
+	  bottom)
+	- replace boxed subgraphs with clustered ones, allowing edges to point
+	  inside and outside of subgraphs freely (note that this feature is
+	  unsupported in aiSee and hence a bit wacky).
+
+
+0.4.3, 2003/03/28
+
+	Add more graph options and loop detection. Support of aiSee.
+
+	- add loop detection through dominators and backedges (see manpage for
+	  example)
+	- add boxed subgraph representation of natural loops in the control
+	  flow graph (supply -n option if -c or -l is used)
+	- add dominator tree output
+	- small bug fixes
+
+
+0.4.1, 2003/03/26
+
+	It should be able to cope with larger objects now, although switch
+	handling is still missing.
+
+	- fix call linearization handling
+	- fix different relocation behaviour of later GCC versions, where
+	  local functions of an object were called either through the help of
+	  a relocation, or using a fixed displacement without relocation
+
+
+0.4.0, 2003/03/25
+
+	- initial release
+

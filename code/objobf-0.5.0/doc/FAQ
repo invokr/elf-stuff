@@ -1,0 +1,23 @@
+
+
+FAQ for objobf
+--------------
+
+
+Q: Why is objobf under the LGPL, while it is no library?
+
+A: To prevent anyone making modifications to it and using them commercially. In
+   case someone wants to do that, he would have to modify objobf to use a
+   library interface and publish all changes made to the library/objobf itself.
+   This way you can use it in a commercial tool but still the changes on the
+   objobf part are made available to the public.
+
+
+
+Q: I found a bug, what to do?
+
+A: Please send the objobf binary, the ELF object file and exact information how
+   to reproduce the bug. (Also describe exactly what you think the bug is).
+   Send the information to teso@team-teso.net and scut@team-teso.net.
+
+

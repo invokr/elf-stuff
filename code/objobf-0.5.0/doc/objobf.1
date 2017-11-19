@@ -1,0 +1,397 @@
+.TH objobf 1 "09 Aug 2003" "TEAM TESO"
+.nh
+.SH NAME
+objobf \- burneye2 x86/Linux ELF relocateable object obfuscator
+
+version 0.5.0.
+
+.SH SYNOPSIS
+.B objobf [options] inputfile
+
+.SH DESCRIPTION
+This page documents the
+.B burneye2
+object file obfuscator utility,
+.I objobf.
+It reads one ELF relocateable object file and
+produces a functional equivalent output file, which is an obfuscated version
+of the input file. To do this,
+.I objobf
+breaks up all functions in the file to the basic block level. This
+representation is used to mutate the code while keeping it semantically
+equivalent. This involves dataflow analysis and basic block transformations.
+Afterwards, the basic block representation as control flow graph is linearized
+into a new object file, which is created from scratch.
+
+.SH BETA SOFTWARE
+Please note that the software is in an early state of development, and does
+not contain some of the features mentioned. Right now it only has the ability
+to insert junk instructions, split and reschedule the order of basic blocks
+among multiple functions ("entangling") and basic block duplication with
+conditional codepathes between the copies. It does not yet provide substantial
+protection against automatic analysis. Currently, it is meant as semi-public
+beta test software. Please report bugs back (see the
+.I BUG REPORTS
+section).
+
+.SH OPTIONS - GENERAL
+.TP
+.I "-o file"
+Write the output to
+.I file
+rather than the default output file "output.o"
+.TP
+.I "-v num"
+Set the verbosity level for both the frontend (analyzation phase) and the
+backend (obfuscation and linearization). Values between zero (0) and three (3)
+are allowed, where 0 means low and 3 high verbosity. Default is zero (low).
+.TP
+.I "-r file"
+Read the random data required from
+.I file.
+This allows for easier reproduction of bugs, as otherwise the random data is
+always pulled dynamically from /dev/urandom. If you can reproduce a bug on a
+small object, use a constant
+.I file
+as randomization input.
+
+.SH OPTIONS - GRAPHING
+.TP
+.I -n
+Do a
+.I natural loop analysis
+on the control flow graph. This is only useful in conjunction with either the
+.I -c
+or
+.I -l
+output option. If this option is enabled, for every basic block in the CFG a
+dominator set is build. Upon this set, a loop detection analysis is
+performed. Only reducible flow graphs can be analyzed this way. This usually
+includes all compiler generated code, though ;). The header block is marked in
+aquamarine (light blue-green).
+For a more detailed explanation of the loop detection, see below at
+.I LOOP DETECTION.
+Please note, that if you use this option, you cannot use
+.I xvcg
+anymore to display the graphs, as boxed subgraphs are used to display the loop
+nesting. The
+.I aiSee
+program supports a superset of the VCG graph language which can handle this.
+Get a free version of aiSee at http://www.absint.com/aisee/download/. You
+might also consider symlinking
+.I aisee.bin
+to
+.I xvcg
+so that the graphs are displayed from
+.I objobf.
+.TP
+.I -N
+Do a
+.I natural loop analysis
+just as with the
+.I -n
+option, but using the heuristics recommended in the Dragon book. There, the
+unification of multiple possible loops is prefered, whereas the method used
+with
+.I -n
+prefers the nesting of those loops. Read below at
+.I LOOP DETECTION.
+.TP
+.I "-l func"
+Dump a register usage analysis for function
+.I func.
+More specifically, a live register dataflow analysis for the function is done
+and written as VCG graph to the file "output.vcg". If the
+.I VCG
+program is installed as
+.I xvcg,
+an output file "output.ps" is created and displayed using
+.I gv.
+.TP
+.I "-c func"
+A simple control flow graph (CFG) of the function
+.I func
+is written as VCG file to "output.vcg". As with the
+.I -l
+option,
+.I xvcg
+is ran and the output is displayed with
+.I gv.
+.TP
+.I "-d func"
+Do a dominator tree analysis on the CFG of function
+.I func
+and dump the graph as VCG file to "output.vcg".
+.I xvcg
+and
+.I gv
+are ran as usual. A basic block B1 is dominated by another basic block B2, if
+all codepathes to B1 go through B2. The dominator tree is visual candy, as
+all blocks above a certain block B1 are executed before B1 is. The dominator
+tree itself is not very useful to human analysis, but substantial for loop
+detection.
+.TP
+.I -u
+Do a register usage profile. Every instruction in the whole object is examined
+for the CPU registers it uses. The final profile is dumped to stdout. Can be
+useful to quickly see how optimized an object file is (equal distribution =
+optimized, eax/edx prefered = unoptimized).
+.TP
+.I -i
+Do an instruction usage profile. As with
+.I -u,
+every instruction in the object is processed. The main opcode index counted
+(for example there is only one opcode index for all variants of mov). The
+final profile of the object is printed to the standard output.
+.TP
+.I -I
+Just like
+.I -i,
+but the output is given in a machine parseable format.
+
+.SH OPTIONS - OBFUSCATION
+.TP
+.I -A
+Activate all obfuscation options with reasonable values. This is the option to
+use if you are unsure about each single option but still want a good level of
+obfuscation.
+
+The rest of the obfuscation options are to set individual parameters. If you
+do not know exactly what you are doing, do not expect a higher level of
+obfuscation by changing individual options.
+.TP
+.I -e
+Entangle basic blocks of all functions in the object. That is, the basic block
+order is randomized globally while the control flow is properly maintained.
+However, there are no opaque predicates between basic blocks right now, and
+the entanglement is easily seperateable (but it does fsck with IDA very well
+already ;)
+.TP
+.I -j factor
+Insert junk instructions to stretch the object files' total instruction count
+by
+.I factor.
+The recommended value is between 3.0 and 10.0.
+.TP
+.I -m
+Mark all inserted junk instructions by prepending a NOP. This is only helpful
+if the
+.I -j
+option is used.
+.TP
+.I -s factor
+Split basic blocks at given
+.I factor.
+This means, from all basic blocks in the object file roughly
+.I factor * all_count
+blocks are selected and split at a random point. The
+.I factor
+has to be inbetween 0.0 and 1.0. This works best with entangling, which can be
+enabled using the
+.I -e
+option. See the
+.I TIPS SECTION
+for more hints how to use it.
+.TP
+.I -O probability
+Set the opaque split probability. Only meaningful in conjunction with the
+.I -s
+option. Then, it overrides the default probability of 0.5 to a value between
+0.0 and 1.0. For every basic block split, this probability determines if the
+second part should be duplicated. If it is choosen to do so, the original
+block is changed so that a conditional jump leads to either of the two. This
+creates an opaque control flow path and will prove really useful with peephole
+obfuscation in the future, as the duplicated basic block and the original can
+be independantly modified.
+.TP
+.I -w factor
+Experimental option: set the instruction swap factor. Not used by
+.I -A
+yet. This option introduces an extra pass in which all instructions in a basic
+block are examined for order-exchangeability. The total number of swapable
+instruction pairs are multiplied with
+.I factor
+and the resulting number of swaps is commited. This is a very non-trivial
+thing and highly experimental. Theoretically, it should work best with
+optimized code that has a high register liveness and does not utilize local
+memory much. Use with care. As with any other factor option, the range of
+.I factor
+is inbetween 0.0 and 1.0.
+
+.SH EXAMPLES
+
+The included simple example shows how to use the obfuscator:
+.PP
+.in +4
+.nf
+gcc -c -o quicksort.o quicksort.c
+objobf -v 3 -e -o quicksort_obf.o quicksort.o
+gcc -o main main.c quicksort_obf.o
+
+gcc -c -O2 -o reducebind.o reducebind.c
+objobf -e reducebind.o
+gcc -o reducebind-obfuscated output.o
+strip reducebind-obfuscated
+objobf -j 2.0 -e reducebind.o
+gcc -o reducebind-more-obfuscated output.o
+objobf -j 8.0 -e -s 0.95 reducebind.o
+gcc -o reducebind-most-obfuscated output.o
+
+objobf -A reducebind.o
+gcc -o reducebind-vanilla output.o
+
+objobf -n -l quicksort quicksort.o
+aisee.bin -color -psoutput output.ps output.vcg
+gv output.ps
+.fi
+.in -4
+
+.SH TIPS
+
+Obfuscation can be defined through three measures: Potency, Resilience and
+Cost.
+
+
+.I Potency
+Measure of complexity added to obfuscated program, roughly equivalent to the
+human difficulty of understanding the program.
+
+.I Resilience
+Measure how well a given transformation protects a program from an automatic
+deobfuscator.
+
+.I Cost
+Measure of increase in resources required to run the program.
+
+The definitions are taken from [Wroblewski2002], see the
+.I REFERENCE SECTION.
+
+.I objobf
+tries to reach a high potency and resilience while not introducing a too high
+cost. Hence, we take a look at how each option influences the three measures.
+
+.SH TIPS - BY OPTION
+.I Entangling (-e).
+This increases the potency and cost of the obfuscation, but the resilience is
+influenced only slightly. The cost depend on the objects size and the
+computers instruction cache size and is roughly constant if no basic block
+splitting is done. If basic block splitting is used, the cost increase by the
+inverse of the splitting factor. So if a high split factor is used the
+entangling cost increase, too. The resilience is not influenced by entangling,
+as the entangling transformation does not change the property of functions
+having disjunct control flow graphes. I suspect the potency increases by a
+constant factor in the range of 0.5 to ~5 if helper tools such as IDA is used,
+for completely human analysis by a simple disassembler alone this increases
+much more.
+
+.I Junk instruction insertion (-j factor).
+This almost always increases the cost linear by
+.I factor.
+There are exceptions, especially if there are tightly optimized inner loops
+that are modified. This may produce a cascade of cache misses, unreliable
+branch prediction and other undesired results which lead to slower code. Junk
+code insertion almost always introduces a constant factor potency to human
+analysis. The junk instructions have to blend properly into the original
+objects code and depend on valid registers. Else they are easily seperateable
+automatically. Hence, the resilience of junk code depends largely on the
+quality of the generated code. (This will be improved in future versions of
+objobf). A
+.I factor
+of 8.0 to 12.0 is recommended to gain the most out of this option. Especially
+with large object files this is helpful.
+
+.I Basic block splitting (-s factor).
+As of the current version of objobf this increases the potency and cost of the
+code, but not the resilience (as no opaque constructs are used). This will be
+changed in the future to jield truly resilient constructs against automatic
+deobfuscation. A
+.I factor
+between 0.5 and 0.99 is recommended. This option is only useful in conjunction
+with the entangling option. The reason this two options are separated is that
+.I -e
+intermixes function boundaries, while the basic block splitting works on basic
+block level. The cost is roughly increased linear to the factor plus the
+opaque split probability (set to 0.5 by default, or with the
+.I -O
+option).
+
+.SH LOOP DETECTION
+
+Within the control flow graph, there are edges which have the property of
+being
+.I back edges.
+A back edge is an edge where the target basic block dominates its source basic
+block (see the
+.I -d option
+for the definition of dominator blocks). All such edges may imply a loop in
+the program. The list of basic blocks within this loop is called
+.I natural loop.
+One basic block of the loop is the so called
+.I header block
+which is the first one and the loops entry point. All natural loops only have
+one single entry point.
+
+.SH KNOWN BUGS
+.I Multiple code sections.
+Only one code section (usually .text) in the object is supported. The most
+common case of multiple code sections are global constructors or destructors
+in C++ programs or system library initialization functions (in both cases the
+sections are called .init and .fini).
+
+.I Dangling *common symbols.
+To ease analyzation, no interpretation of symbols refering to the *common
+section has been implemented (*common is what will turn into .bss at link
+time). To fix this, use the following command line before feeding the object
+into
+.I objobf
+
+.in +4
+.nf
+ld -q -r -d -o input-temp.o input.o
+objobf input-temp.o
+.fi
+.in -4
+
+.I Assertion failures.
+If you experience one of the assertions below, please send me in the object
+file, the options and the random seed you use for further investigation.
+
+.in +4
+.nf
+bblock_fixup_end_single: Assertion `displ_relofs != 0' failed.
+.fi
+.in -4
+
+.I Too many loops detected.
+The loop analysis has trouble if there are more than one backedge to a loop
+head. Then, two scenarios are possible. Either - the first case - it could be
+that there are multiple loops nested within each other, and two loops should
+be displayed. This case is correctly handled. Or, - the second case - it is
+only one loop with multiple continuation points, such as continue statements.
+This case is not correctly handled and multiple nested loops are displayed,
+which all share the same loop head. I implemented algorithms for both cases,
+but the problem is to choose the proper one. To solve this problem, further
+loop analysis would be required. The Dragon book advises to assume it as one
+loop, while I find it easier to manually group multiple nested loops as one,
+once it is clear that it is just one loop. You can choose between the two
+methods of loop detection with the
+.I -n
+(prefer the nesting of loops) and
+.I -N
+(prefer the unification of loops) options. Maybe in the future I will
+implement induction variable analysis and provide better heuristics to select
+the proper nested/group-as-one algorithm.
+
+.SH REFERENCES
+[Wroblewski2002]
+.I http://www.mysz.org/papers/obfuscation.pdf
+
+An all around very good introduction into the topic of obfuscation.
+
+.SH BUG REPORTS
+
+If you find a bug (and that is for sure), please try to reproduce it with an
+object as small as possible, as the analysis will be easier then. Please mail
+me at
+.I scut@team-teso.net
+

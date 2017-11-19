@@ -1,0 +1,15 @@
+
+
+Pitfalls
+========
+
+FORCE_COMMON_ALLOCATION
+
+  We need to instruct the linker to allocate space in a section for the common
+symbols. That is, symbols either having STT_COMMON as type or SHN_COMMON as
+section header index, or both. This are usually C external variables. To do
+this, use the GNU ld option "-d" or - when using a linker script - the option
+command "FORCE_COMMON_ALLOCATION". See the examples/ directory.
+
+
+
