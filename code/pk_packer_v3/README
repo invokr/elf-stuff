@@ -1,0 +1,7 @@
+ryan@bitlackeys.org
+
+./configure
+make
+make install
+
+Have fun with the rest :)

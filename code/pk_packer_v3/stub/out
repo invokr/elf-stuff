@@ -1,0 +1,57 @@
+wlan0     Scan completed :
+          Cell 01 - Address: 00:14:BF:C1:08:82
+                    Channel:6
+                    Frequency:2.437 GHz (Channel 6)
+                    Quality=32/70  Signal level=-78 dBm  
+                    Encryption key:on
+                    ESSID:"numata"
+                    Bit Rates:1 Mb/s; 2 Mb/s; 5.5 Mb/s; 11 Mb/s; 18 Mb/s
+                              24 Mb/s; 36 Mb/s; 54 Mb/s
+                    Bit Rates:6 Mb/s; 9 Mb/s; 12 Mb/s; 48 Mb/s
+                    Mode:Master
+                    Extra:tsf=000001ac5c3ee979
+                    Extra: Last beacon: 3060ms ago
+                    IE: Unknown: 00066E756D617461
+                    IE: Unknown: 010882848B962430486C
+                    IE: Unknown: 030106
+                    IE: Unknown: 2A0104
+                    IE: Unknown: 2F0104
+                    IE: Unknown: 32040C121860
+                    IE: Unknown: DD06001018020007
+                    IE: WPA Version 1
+                        Group Cipher : TKIP
+                        Pairwise Ciphers (1) : TKIP
+                        Authentication Suites (1) : PSK
+          Cell 02 - Address: 00:1E:58:01:6C:5A
+                    Channel:9
+                    Frequency:2.452 GHz (Channel 9)
+                    Quality=24/70  Signal level=-86 dBm  
+                    Encryption key:on
+                    ESSID:"hvm3"
+                    Bit Rates:1 Mb/s; 2 Mb/s; 5.5 Mb/s; 11 Mb/s
+                    Bit Rates:6 Mb/s; 9 Mb/s; 12 Mb/s; 18 Mb/s; 24 Mb/s
+                              36 Mb/s; 48 Mb/s; 54 Mb/s
+                    Mode:Master
+                    Extra:tsf=0000000b03dad180
+                    Extra: Last beacon: 10840ms ago
+                    IE: Unknown: 000468766D33
+                    IE: Unknown: 010482848B96
+                    IE: Unknown: 030109
+                    IE: Unknown: 2A0100
+                    IE: Unknown: 32080C1218243048606C
+                    IE: IEEE 802.11i/WPA2 Version 1
+                        Group Cipher : TKIP
+                        Pairwise Ciphers (2) : TKIP CCMP
+                        Authentication Suites (1) : PSK
+                    IE: WPA Version 1
+                        Group Cipher : TKIP
+                        Pairwise Ciphers (2) : TKIP CCMP
+                        Authentication Suites (1) : PSK
+                    IE: Unknown: DD070050F202000100
+                    IE: Unknown: DD1E00904C334C101FFFFF000000000000000000000000000000000000000000
+                    IE: Unknown: DD1A00904C340900070000000F000000000000000000000000000000
+                    IE: Unknown: 2D1A4C101FFFFF000000000000000000000000000004000000000000
+                    IE: Unknown: 3D160900030000000F000000000000000000000000000000
+                    IE: Unknown: 050400010000
+                    IE: Unknown: DD0E0050F204104A0001101044000102
+

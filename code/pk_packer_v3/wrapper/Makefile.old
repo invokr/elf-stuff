@@ -1,0 +1,18 @@
+all: elfcrypt	
+
+elfcrypt: elf.o key.o misc.o rc4.o wrap.o usage.o
+	gcc -g elf.o key.o misc.o rc4.o wrap.o usage.o -o elfcrypt -lssl
+elf.o: elf.c
+	gcc -g -c elf.c
+key.o: key.c
+	gcc -g -c key.c
+misc.o: misc.c
+	gcc -g -c misc.c
+rc4.o: rc4.c
+	gcc -g -c rc4.c
+usage.o: usage.c
+	gcc -g -c usage.c
+
+clean:
+	rm -f *.o elfcrypt
+

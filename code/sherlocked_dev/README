@@ -1,0 +1,48 @@
+Sherlocked v3. by elfmaster@zoho.com 2014 from Bitlackeys
+
+About:
+Sherlocked is a protector for scripts of any type. It uses a simple xor cipher
+with a provided key. Unless '-r' option is used, the key is stored (encrypted)
+within the binary and the binary will run without the user providing the key.
+Sherlocked takes your script, encrypts it, and stores it in an output ELF x86_64
+executable file. The ELF executable at runtime will decrypt the script and
+temporarily write it to a random file in /tmp. It passes the script and cmdline
+args to the interpreter, and then deletes the script. 
+
+
+Compile:
+make
+
+Usage:
+./sherlocked <infile> <outfile> <key> <interpreter> [-r]
+
+Options:
+<infile> 	<-> The script file
+<outfile> 	<-> The protected output file
+<key>		<-> The key string used to encrypt the script
+[-r] 		<-> Require the user who runs the protected executable supplies the key for it to run I.E ./script.elf <key>
+
+
+Example:
+
+$ ./script.py
+
+hello I am a python script
+['./script.py']
+
+$ ./sherlocked script.py script.elf p4ssw0rd /usr/bin/python -r
+[+] Warning... password protected files aren't compatible with scripts that require command line args
+[+] The user who executes script.elf must supply password: p4ssw0rd
+[+] Encoding payload data
+[+] Encoding payload struct
+[+] Building msg program
+[+] utils/stripx exists, so using it to strip section headers off of DRM archive
+[+] /usr/bin/upx exists, so using it to compress script.elf
+Successfully created script.elf
+
+$ ./script.elf arg1 arg2
+Enter passwd: 
+
+hello I am a python script
+['/tmp/.sherlocked.script.123xyz.6811', 'arg1', 'arg2']
+
