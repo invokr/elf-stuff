@@ -1,0 +1,47 @@
+
+
+this file is outdated, but there are some hints how to improve burneye
+
+
+HIGH PRIORITY (scheduled for 0.4):
+
+	- munmap of original executeable
+	- redirection of original ELF entry point
+	- adding more fingerprint inputs
+	- more obfuscation to the loader (running line ?)
+	- external definition file parser
+	- per function encryption
+	- anti dumper protections (against /lib/ld-linux redirection and
+	  ptracing)
+
+
+MEDIUM PRIORITY (scheduled for 0.5)
+
+	- own rtld/relocator
+	- GOT redirection
+	- de-/compression of the original executeable, right before loading
+	- per-function running line code
+	- stripping of section header table and sections
+
+
+LOW PRIORITY (scheduled for >= 0.6 or 1.0)
+
+	- virtual cpu engine for everything important (decryption/loading)
+	- mutating compiler for that engine, simple scripting language
+	- anti disassembling
+	- more than one obfuscation encryption layer
+	- dynamic-to-static linking mode with full integration/obfuscation
+	  of used libraries (and hardwiring calls, to strip .dynamic)
+	- cleanup of stub loader functions
+	- getting rid of erasure code in rs.[ch] or replace it with a real
+	  tamperproof e-miss-n module (polynominal class (e - n) with e dots)
+
+
+IDEAS
+
+	- x86 code refraction engine to completely mutate the code
+	- making further use of symbol information of the binary
+
+--
+vi:fo=tcrq:tw=78:
+

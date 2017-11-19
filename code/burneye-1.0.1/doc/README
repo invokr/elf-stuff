@@ -1,0 +1,15 @@
+
+
+Weird stuff noted while developing
+----------------------------------
+
+A PT_LOAD segment which is mapped to memory by the kernel with (PF_R | PF_W |
+PF_X) priviledges (phdr.p_flags = 0x0007) which defines the brk(0) initial
+value cannot shrink. If the priviledges are (PF_R | PF_W) it can somehow. Maybe
+the kernel assumes the last mapped page with (PF_R | PF_W) priviledges to be a
+dynamic (.bss or malloc) page, while one with (PF_R | PF_W | PF_X) already
+contains a fixed amount of program code, which would be lost otherwise. Anyway,
+you can change the page flags using mprotect later, the kernel does not mind
+shrinking it then. Weird.
+
+

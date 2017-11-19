@@ -1,0 +1,139 @@
+
+BURNEYE preliminary documentation
+
+
+Description of how per-function encryption works in burneye
+===========================================================
+
+If the binary that is wrapped by burneye contains symbolic debug information
+(usually unstripped binaries compiled with the -g option), we apply a special
+encryption method.
+
+Through the debug info, certain information about the functions within the
+binary is extracted: The virtual address the function begins with, the length
+in bytes of the functions' machine instructions and its name.
+
+Each function is encrypted then. Since it is very difficult to move the
+functions, we cannot prepend them with a decryption stub. Instead, we encrypt
+the function, but overwrite its first eight bytes using a special sequence of
+machine instructions:
+
+	push	eax		; 0x50
+	pusha			; 0x60
+	pushf			; 0x9c
+	call	cg_entry	; 0xe8 0x00 0x00 0x00 0x00
+
+After the call instruction the remaining encrypted function data is stored. The
+first eight bytes - which we overwrite with our stub - are saved elsewhere (see
+below). This eight byte stub is stored directly within the binary. The function
+can only be in two states throughout runtime, it can be encrypted or decrypted.
+If it is encrypted the first eight bytes of the function contains always this
+stub bytes. On the other hand, if it is decrypted the real original bytes are
+at that place.
+
+Now for the interesting part. As the function calls the 'cg_entry' entry point,
+its stack space looks like this:
+
+	[(possible) function arguments]
+	[return address from func caller]
+	[eax]
+	[pusha register block]
+	[saved flag register]
+	[cg_entry caller return address (func + 8)]
+
+The code at 'cg_entry' pops the last address from the stack and computes the
+original function address from it (just minus eight). Using the address, it
+calls a search function which searchs through a table of structures, one for
+each encrypted function. Once it finds the appropiate structure, it restores
+the first eight bytes of the function with the saved encrypted bytes, then
+calls a decryption function on the entire functions data. Normally it could
+just restore the flags and all registers then and jump to the functions entry
+point. This would work perfectly, but the more functions are called in the
+application, the more it is decrypted. If all functions are called at least one
+time, the entire .text segment is decrypted and can be dumped.
+
+To avoid this 'lazy-decryption' problem, the 'cg_entry' code also replaces the
+return address of the function that is decrypted. Thus, as the now-decrypted
+function is returning through a simple 'ret' instruction, our code is called
+again. The diagram shows how this works:
+
+usual:  [outside function]---[core function]---[called function]
+
+cg:     [outside function]. .[core function]. .[called function]
+                          | |               | |
+                .---------' '--------. .----' '------------.
+                |                    | |                   |
+                '-----[cg_entry]-----' '-----[cg_detry]----'
+
+This way both the entry and return ('detry') point of the function is
+redirected. As a clever reader you may have noticed that the parent function
+remains decrypted in this setup. Therefore the 'cg_entry' code also re-encrypts
+its caller function.
+
+In detail the stub and 'cg_entry' code does:
+
+	1. save necessary data (flags, registers)
+	2. encrypt outside function
+	3. restore first eigth encrypted bytes of core function
+	4. decrypt core function
+	5. restore necessary data (flags, registers)
+	6. pass control to entry point of core function (through jmp)
+
+
+The 'cg_detry' code has to mirror the behaviour from the opposite perspective:
+
+	1. save necessary data (flags, registers)
+	2. encrypt core function
+	3. overwrite first eight bytes in core function with stub
+	4. decrypt outside function
+	5. restore necessary data (flags, registers)
+	6. return to real core function return address
+
+
+Possible runtime problems
+-------------------------
+
+This function wrapping method is quite reliable and can cope with various
+situations, such as goto's, signal handlers, function pointers and generally
+non-linear code. However, there is one case where this does not work.
+
+If there is an execution path which points from within one function to the
+middle of another encrypted function, the target function is not decrypted.
+This sounds complicated, so here is a rule of thumb: Do NOT use longjmp/setjmp
+within your code.
+
+If you have to use it or you have to protect a stock binary with symbols, you
+can tag the function that the 'longjmp' passes control to (i.e. the function
+that has the 'setjmp' call) with a decrypt-log. This means it is initially
+decrypted once, before your binary receives any control at all and remains
+decrypted throughout the whole runtime.
+
+Note that this way the function that receives the 'longjmp' remains unprotected
+through the whole time the binary runs. Hence, use this only if there is no way
+to replace the 'longjmp'. In most cases there is a way.
+
+Also, you can use the decrypt-lock functionality for performance improvements,
+see below.
+
+
+Performance overhead
+--------------------
+
+TODO
+
+Performance is an issue with this protection. However, I do not have made
+concrete statistics about it. For most I/O based programs the overhead may lie
+around 10 to 15 times the instructions executed in runtime than in the
+unprotected version. With some per-function optimizations, leaving the most
+often called functions unprotected at runtime these may drop to a level of five
+or less. If only single core functions are protected there may be no overhead
+at all.
+
+However, to make a real decision, statistics are required once the encrypter is
+finished. TODO
+
+
+
+--
+vi:fo=tcrq:tw=79
+

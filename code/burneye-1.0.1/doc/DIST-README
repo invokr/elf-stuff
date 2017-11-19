@@ -1,0 +1,203 @@
+
+
+BURNEYE
+
+readme file
+version 1.0
+
+
+WARNING: If you are going to use burneye at all, then read through the entire
+         document. I have kept it short enough to not waste your time, while
+         trying to explain the most important things.
+
+
+
+Burneye is an executeable encryption program, which is suited to protect ELF
+binaries on the Intel x86 Linux operating system. It supports a variety of
+options to wrap an arbitrary executeable with multiple encryption layers.
+
+Foreword: Executeables wrapped with burneye are not necessarily more secure. If
+you use burneye in a wrong way, it takes a few minutes and some custom tools to
+restore the original executeable. If you use the password or fingerprint
+encryption the right way, it can be very difficult, if not impossible, to
+restore the original executeable without access to the password and the host
+fingerprint.
+
+
+CRASH TOUR
+
+There are three layers so far, when encrypting executeables with burneye. The
+simplest layer, the obfuscation layer is a simple insecure ciphers, which just
+scrambles the content. It is enabled every time and is the outer layer. Even
+the burneye functions are scrambled with this layer. All layers are
+independant, you can combine any of the following layers.
+
+The second layer is the password layer, which you can use to protect your
+executeable with a custom password. The password is read in from the current
+pty, so it should work even from within scripts. The password is hashed through
+SHA1, some magic is applied and the layers below are decrypted with RC4. By
+default a check is done to ensure the decryption succeeded. You can disable
+this check by using the '-i' option. It is recommended to use it, because it
+does not expose any key bits but stops from executing junk if you mistyped the
+password. The password layer can be enabled by using the '-p' option, which
+takes the password as parameter (use quotes, as in: -p "mypassword"). You can
+also add the '-P' option at will, which allows you to have the password given
+in an environment variable instead of having to type it each time you run the
+program.
+
+The third and deepest layer is the fingerprinting layer. A fingerprint is a
+compilation of the characteristics of the host the binary is running on. So far
+a number of different input data is used, just run burneye with the '-l' option
+to see a list. You should be able to see what data it takes, as the behaviour
+is undocumented yet. The default enabled tests should be fine to use. You can
+disable/enable each test using the '-e' and '-d' option, as in '-d sysbase
+-e procmem'. When testing and playing around, try appending the '-l' option as
+last parameter to your commandline to see if your changes took effect. Anyway,
+there are two ways to feed burneye with fingerprints. The most convenient is
+the '-F' option, which creates a fingerprint of the current host (the one
+burneye is running on) and uses that to protect the binary. Another option,
+which can be useful is the '-f' option. This way the fingerprint is read from a
+fingerprint file. This can be used to encrypt a binary for someone whom do you
+not trust. He runs the supplied 'fingerprint' binary on his host and sends you
+the fingerprint file. Then you use burneye locally with the '-f foofile.fp'
+option to create a binary that will only run on his host.
+    The '-t' option can be used to allow a certain tolerance in the
+fingerprint. Say your untrusted friend wants to upgrade his RAM or change his
+partition table. Then use some low value, like '-t 1' or '-t 2'. This way one -
+or two - subtests can fail and the binary will still run. Do not use too high
+values here (burneye will warn if the value is cryptographically unsafe, you
+can rely on that, but if it warns, change your options). If you are absolutely
+sure about what you are doing, you can use the '-E' option to override the
+warning on weak protection pads.
+
+The most simple and non-cryptography related option is the '-B'. You can use it
+to display a banner before all other layers a processed. This could be contact
+information, a copyright display or a warning message as it is in front of
+burneye itself. In any normal case you should favor the '-B' option over the
+'-b' option. '-B' displays the banner on the tty, which will work from within
+scripts. '-b' displays it on stderr (2).
+
+Another interesting option is the '-U' option. If you enable it, you have to
+supply an additional argument. If the argument is set as environment variable
+when the wrapped binary is run, it will be securely wiped from the harddist. So
+a simple "burneye -U DELETE -o distbin blabin" will add a self-deletion stub to
+'distbin'. If you call distbin afterwards with the environment variable
+'DELETE' set, it will wipe itself from the harddisc. It uses a loop of urandom
+input data to overwrite itself, syncing after each pass and then unlinks
+itself. To do this it extracts a special 250 byte unlinking stub which is
+executed and does the whole work. Only this minimal stub can be reconstructed
+(but it is unlinked, too).
+
+One generic option is the '-o' option, which allows you to specify the name of
+the output file.
+
+A new option, which is still in beta state in this version is the 'SEAL mode',
+which allows you to create a self-modifying binary. The produced binary will
+run on any system. The first time it is run it will create a fingerprint of the
+system and 'seal' itself to that host. It cannot be run on other hosts after
+this sealing has taken place. Also, it safely deletes the 'SEAL' binary before
+creating the protected one. This option is quite complicated to implement
+reliable, so use it with care. I tried my best to make it work, but - as said -
+its still in beta state.
+
+The TAG option is somewhat complicated to use, see below for an example.
+
+
+
+Examples:
+
+burneye -o ls /bin/ls		# only obfuscation, no protection
+
+burneye -p "secret" -o ls /bin/ls	# encrypt with password 'secret'
+
+burneye -B warning.txt -o ls /bin/ls	# display banner in warning.txt before
+
+burneye -F -t 1 -B warning.txt -o ls /bin/ls	# use fingerprint of local
+	# host, with one test tolerance and display banner from warning.txt
+
+fingerprint -d procpartitions -f foohost.fp
+burneye -f foohost.fp -t 2 -p "hidden" -o ls /bin/ls
+	# use fingerprint from file, two test tolerance and password hidden
+
+burneye -U DELETE -o ls /bin/ls
+DELETE=foo ./ls
+	# will securely wipe ./ls from the hdd
+
+burneye -p puke -S -o ls /bin/ls
+./ls  # will seal and rewrite the binary
+OLDHOSTNAME=`hostname`
+./ls  # will work
+hostname moo
+./ls  # will not work
+hostname $OLDHOSTNAME
+./ls  # will work
+
+
+TAG option:
+
+$ TAG=ENV:KEY:VALUE ./burneye -T TAG -o ls /bin/ls
+$ ./ls
+README  burneye  fingerprint  ls
+$ ENV=KEY ./ls
+VALUE
+$ ENV=KEY_ ./ls
+ÒB9^"g06š!ùñûï›`1¼å¤ÚÃ˜ÔÂûL
+$
+
+
+Anyway, if you have not got what this is by now, I cannot help you. All other
+questions are answered by the FAQ below.
+
+
+-scut
+
+
+FAQ:
+====
+
+[Q]: Can I have the source code?
+
+  A: No.
+
+
+[Q]: This is security by obscurity, how can you be sane and say its secure?
+
+  A: Because I really think it is secure. Or I am insane. Or both. (No really,
+     it is quite secure if the binary does not execute.)
+
+
+[Q]: Isn't this a real blackhat-only tool and don't you feel guilty about it?
+
+  A: Some people are sick of the "full disclosure" advocates stealing hard work
+     of non commercial research groups. Sure, it can be used for bad purposes,
+     as almost anything.
+
+
+[Q]: I use PaX and it does not run. Why is that?
+
+  A: PaX optionally disables mprotect() functionality. Disable
+     CONFIG_PAX_MPROTECT as kernel option and everything should work. If you do
+     not want to disable it or you cannot, there are things to live with.
+     Mainly, that you cannot use burneye on that system.
+
+     I will (maybe) add some of the propietary flags that are used by PaX and
+     Openwall to allow burneye binaries to be run on such systems in the
+     future.
+
+
+[Q]: Why does the deletion take that long?
+
+  A: It uses 7 passes and grabs the data to overwrite with from /dev/urandom.
+     Which is suboptimal though, it could be more secure. Anyway, it will get
+     rid of the 1995 tct-using-type of forensics (and leave more room to the
+     skilled forensics).
+
+
+[Q]: I have this mad idea in my head about this double helix decryption wrap
+     code that self hooks its root with a polymorphic chamelion code! Will you
+     implement that ?
+
+  A: No, but you can write me an email nevertheless ;)
+
+--
+vi:fo=tcrq:tw=79

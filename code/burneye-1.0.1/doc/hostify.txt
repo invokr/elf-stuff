@@ -1,0 +1,71 @@
+
+
+Technical details
+=================
+
+To allow a certain deviation in the host fingerprint we use a Reed Solomon
+encoder to correct invalid data to a certain amount. This amount is
+configureable per variable.
+
+Each test result is hashed into an SHA1 hash, which is stored in an array of
+hashes. The following tests are currently done:
+
+	TODO/XXX
+	uname
+	/proc/pci
+	main IP
+	memory size
+
+Under normal circumstances even slight deviations in the individual tests will
+make the SHA1 hash value look very different. Every SHA1 hash occupies 20
+bytes, so after flattening the hash values into a linear byte array we have a
+layout like this:
+
+	[hash0] [hash1] [hash2] ... [hashn-1]
+
+Where the entire length is (n * 20), n being the number of tests we conduct.
+The user can specify the amount of deviations he wants to tolerate in this hash
+value array. Say out of all hash values, we allow two values to be completely
+different, so thats 40 bytes. We will construct a Reed Solomon encoder with the
+following properties, 'cl' being the number of hash values we should be able to
+compensate, 'n' being the number of hashs overall:
+
+	- 8 bit symbol size (MM = 8)
+	- n * 20 information symbols (KK >= n * 20)
+	- NN being the number of chunk symbols (NN = 2**MM - 1)
+	- KK = NN - 40 * cl
+
+We have to ensure that:
+
+	(40 * cl) + (20 * n) <= NN
+
+If we for example have eight hash values and want to be able to correct two of
+them, we get:
+
+	40 * 2 + 20 * 8 = 240 <= NN
+
+Over the entire corrected hash array another SHA1 hash is constructed, which
+works as final decryption key for any further operation.
+
+In case the user disables any tolerance for deviations in the host fingerprint,
+the Reed Solomon encoder is skipped.
+
+
+This approach is secure for a few reasons:
+
+	- the Reed Solomon decoder algorithm can only fix a certain number of
+	  bytes and one can only fix one part of the array if he knows the
+	  other.
+	- there should be enough variation between the individual components
+	  the hash array is build of that every system is unique
+	- the SHA1 hashing algorithm is irreversible
+	- the underlieing encryption algorithm is secure
+
+
+-scut
+
+
+PS: Microsoft should have used a similar approach in their fingerprinting
+    technology
+--
+vi:fo=tcrq:tw=79

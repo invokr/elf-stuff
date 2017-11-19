@@ -1,0 +1,23 @@
+
+burneye source distribution
+readme file
+-----------------------------------------------------------------------------
+
+
+It does work currently.
+
+
+Anyway, quickstart, you need: nasm, ld, binutils, gcc
+Build: in src/ do:
+
+make clean harddist
+
+
+./burneye <executeable> will produce ./output then, which is a wrapped ELF
+executeable. You have to chmod it and then you can try to execute it. Run only
+./burneye to get a quick help, everything should be self-explaining.
+
+
+--
+vi:fo=tcrq:tw=79
+

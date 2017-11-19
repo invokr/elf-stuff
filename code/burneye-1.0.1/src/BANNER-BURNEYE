@@ -1,0 +1,16 @@
+***
+*** WARNING
+***
+*** This is program does not guarantee any functionality and may break your
+*** entire system. Do not use it for malicious purposes, but to protect your
+*** stuff from malicious people. Also, please be aware that in the
+*** non-passworded or non-fingerprinted mode (you can combine both for extra
+*** security) any serious reverse engineer is able to unwrap the binary in
+*** minutes. In the passworded binary however, it is hardly possible if the
+*** password is not known. Rule of thumb: if the binary runs, it can be broken.
+*** The binding is still very weak between the encryption engine and the
+*** binary, so unwrapping is possible.
+***
+*** If you have understood the above limitations, enter 'accept' now.
+***
+
